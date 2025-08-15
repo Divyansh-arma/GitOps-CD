@@ -68,11 +68,11 @@ jobs:
 
         ####  OTHER WAY TO DEPLOY AND PUSH #####
 
-    # - name: Build and push Docker image
-            #   run: |
-            #     docker build -t ${{ env.ECR_REPOSITORY }} .
-            #     $(aws ecr get-login --no-include-email)
-            #     docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+        # - name: Build and push Docker image
+        #   run: |
+        #     docker build -t ${{ env.ECR_REPOSITORY }} .
+        #     $(aws ecr get-login --no-include-email)
+        #     docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
             #     docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
 
             # - name: Deploy to Kubernetes
