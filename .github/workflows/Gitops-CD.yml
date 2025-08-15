@@ -1,0 +1,85 @@
+name: GitOps CD
+on: workflow_dispatch
+env:
+    AWS_REGION: us-east-1
+    ECR_REPOSITORY: gitops-iac
+
+jobs:
+    Testing:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Maven test
+              run: mvn test
+
+            - name: Maven checkstyle
+              run: mvn checkstyle:checkstyle
+
+            - name: Setup JDK
+              uses: actions/setup-java@v3
+              with:
+                java-version: '11'
+                distribution: 'temurin'
+
+            - name: Setup SonarQube
+              uses: warchant/setup-sonar-scanner@v7
+            
+            - name: SonarQube scan
+              run: sonar-scanner 
+                -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+                -Dsonar.host.url=${{ secrets.SONAR_URL }}
+                -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+                -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+                -Dsonar.sources=src/
+                -Dsonar.junit.reportPaths=target/surefire-reports/
+                -Dsonar.jacoco.reportPaths=target/jacoco.exec
+                -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml
+                -Dsonar.java.binaries=target/test-classes/com/visualpath/account/controllerTest/
+
+            - name: Quality Gate Check
+              uses: sonarsource/sonarqube-quality-gate-action@master
+              
+              timeout-minutes: 5
+              env:
+                SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+                SONAR_HOST_URL: ${{ secrets.SONAR_URL }}
+    
+    BUILD_AND_DEPLOY:
+        needs: Testing
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+
+            - name: push to ECR
+              uses: appleboy/docker-ecr-action@master
+              with:
+                access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                registry: ${{ secrets.REGISTRY }}
+                repo: ${{ env.ECR_REPOSITORY }}
+                region: ${{ env.AWS_REGION }}
+                tags: latest,${{ github.run_number }}
+                daemon_off: false
+                dockerfile: ./Dockerfile
+                context: ./
+
+        ####  OTHER WAY TO DEPLOY AND PUSH #####
+
+    # - name: Build and push Docker image
+            #   run: |
+            #     docker build -t ${{ env.ECR_REPOSITORY }} .
+            #     $(aws ecr get-login --no-include-email)
+            #     docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+            #     docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+
+            # - name: Deploy to Kubernetes
+            #   run: |
+            #     kubectl apply -f k8s/deployment.yaml
+
+              
+
+
+
